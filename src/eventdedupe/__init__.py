@@ -13,4 +13,4 @@ from ._core import Config, dedupe, explain, groups, merge, same_event
 from ._text import similarity, tokens
 
 __all__ = ["Config", "dedupe", "explain", "groups", "merge", "same_event", "similarity", "tokens"]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

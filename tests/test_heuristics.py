@@ -184,7 +184,7 @@ class Explain(unittest.TestCase):
         b = ev("Open Mic Night", venue="Sour Mouse")
         d = explain(a, b)
         self.assertEqual(set(d), {"match", "rule", "reason", "dates", "start_gap_minutes", "same_source",
-                                  "title_similarity", "venue_similarity"})
+                                  "title_similarity", "venue_similarity", "distance_km"})
         self.assertFalse(d["match"])
         self.assertIsNone(d["rule"])
         self.assertEqual(d["reason"], "different venues")
@@ -260,6 +260,142 @@ class Fixture(unittest.TestCase):
         t = time.perf_counter()
         groups(events)
         self.assertLess(time.perf_counter() - t, 20)
+
+
+class Links(unittest.TestCase):
+    def test_same_page_same_time_is_one_event(self):
+        a = ev("Fall Makers Market", "2026-10-18T10:00:00-07:00", "Fort Mason", "venue",
+               link="https://www.example.org/events/fall-makers-market/?utm_source=x")
+        b = ev("Makers Market: Fall Edition at Fort Mason Center", "2026-10-18T10:00:00-07:00", None, "agg",
+               link="https://example.org/events/fall-makers-market#tickets")
+        self.assertEqual(explain(a, b)["rule"], "same_link")
+
+    def test_same_page_different_times_stays_apart(self):
+        link = "https://tickets.example.com/e/late-night-laughs-123"
+        a = ev("Late Night Laughs", "2026-10-18T19:00:00-07:00", "Cobb's", "a", link=link)
+        b = ev("Late Night Laughs", "2026-10-18T21:30:00-07:00", "Cobb's", "a", link=link)
+        self.assertFalse(same_event(a, b))
+
+    def test_listing_pages_and_site_roots_are_not_evidence(self):
+        from eventdedupe._signals import canonical_link
+        self.assertIsNone(canonical_link("https://venue.example.com/"))
+        self.assertIsNone(canonical_link("https://venue.example.com/events/"))
+        self.assertIsNone(canonical_link("mailto:hi@example.com"))
+        self.assertEqual(canonical_link("HTTPS://WWW.Example.com/e/1/?fbclid=z&b=2&a=1"),
+                         "example.com/e/1?a=1&b=2")
+        a = ev("Jazz Jam", "2026-10-18T20:00:00-07:00", None, "a", link="https://club.example.com/calendar")
+        b = ev("Poetry Slam", "2026-10-18T20:00:00-07:00", None, "b", link="https://club.example.com/calendar")
+        self.assertFalse(same_event(a, b))
+
+    def test_links_can_be_switched_off(self):
+        a = ev("Fall Makers Market", "2026-10-18T10:00:00-07:00", link="https://x.example/e/1")
+        b = ev("Makers Market: Fall Edition at Fort Mason Center", "2026-10-18T10:00:00-07:00",
+               link="https://x.example/e/1")
+        self.assertEqual(explain(a, b)["rule"], "same_link")
+        self.assertFalse(same_event(a, b, config=Config(links=False)))
+
+    def test_shared_profile_link_needs_related_titles(self):
+        link = "https://www.instagram.com/some_venue/"
+        a = ev("Open Projector Night", "2026-10-18T18:00:00-07:00", None, "a", link=link)
+        b = ev("Tinker Night", "2026-10-18T18:00:00-07:00", None, "b", link=link)
+        self.assertFalse(same_event(a, b))
+
+    def test_program_page_shared_by_different_places(self):
+        # One parks-department page lists the same class at many recreation centers.
+        link = "https://sfrecpark.org/1183/Zumba-in-the-Parks"
+        a = ev("Zumba - Mission Playground", "2026-10-30T18:30:00-07:00", "Mission Playground", "a", link=link)
+        b = ev("Zumba - Cayuga Playground", "2026-10-30T18:30:00-07:00", "Cayuga Playground", "a", link=link)
+        self.assertFalse(same_event(a, b))
+
+    def test_hash_routed_calendars_keep_the_route(self):
+        from eventdedupe._signals import canonical_link
+        a = canonical_link("https://www.mercurynews.com/event-calendar#/details/open-mic/123")
+        b = canonical_link("https://www.mercurynews.com/event-calendar#/details/salsa-night/456")
+        self.assertNotEqual(a, b)
+        self.assertEqual(a, "mercurynews.com/event-calendar#/details/open-mic/123")
+        self.assertIsNone(canonical_link("https://www.mercurynews.com/event-calendar"))
+
+
+class Coordinates(unittest.TestCase):
+    def test_close_points_confirm_differently_named_venues(self):
+        a = ev("Harvest Lantern Walk", "2026-10-18T18:00:00-07:00", "Botanical Garden", "a", lat=37.7678, lon=-122.4686)
+        b = ev("Harvest Lantern Walk", "2026-10-18T18:00:00-07:00", "SF Botanical Garden at Strybing",
+               "b", lat=37.7680, lon=-122.4690)
+        self.assertIn(explain(a, b)["rule"], ("title_venue", "title_coordinates"))
+        c = ev("Harvest Lantern Walk", "2026-10-18T18:00:00-07:00", "Strybing Arboretum", "b",
+               lat=37.7680, lon=-122.4690)
+        d = explain(a, c)
+        self.assertEqual(d["rule"], "title_coordinates")
+        self.assertLess(d["distance_km"], 0.15)
+
+    def test_far_points_block_a_title_only_merge(self):
+        a = ev("Community Yoga in the Park", "2026-10-18T09:00:00-07:00", None, "a", lat=37.7694, lon=-122.4862)
+        b = ev("Community Yoga in the Park", "2026-10-18T09:00:00-07:00", "Dolores Park", "b",
+               lat=37.7596, lon=-122.4269)
+        d = explain(a, b)
+        self.assertFalse(d["match"])
+        self.assertIn("km apart", d["reason"])
+
+    def test_agreeing_venue_names_beat_a_bad_geocode(self):
+        a = ev("Fall Gala", "2026-10-18T19:00:00-07:00", "Palace of Fine Arts", "a", lat=37.8029, lon=-122.4484)
+        b = ev("Fall Gala", "2026-10-18T19:00:00-07:00", "Palace of Fine Arts", "b", lat=37.7749, lon=-122.4194)
+        self.assertEqual(explain(a, b)["rule"], "title_venue")
+
+    def test_schema_org_geo_and_null_island(self):
+        from eventdedupe._signals import coordinates
+        self.assertEqual(coordinates(None, None, {"geo": {"latitude": "40.7", "longitude": "-74.0"}}), (40.7, -74.0))
+        self.assertIsNone(coordinates(0, 0, None))
+
+
+class AttendanceMode(unittest.TestCase):
+    def test_online_never_merges_with_in_person(self):
+        a = ev("Intro to Pottery Q&A", "2026-10-18T18:00:00-07:00", "Online", "a")
+        b = ev("Intro to Pottery Q&A", "2026-10-18T18:00:00-07:00", None, "b",
+               eventAttendanceMode="https://schema.org/OfflineEventAttendanceMode")
+        self.assertEqual(explain(a, b)["reason"], "one listing is online, the other in person")
+
+    def test_venue_names_with_online_words_stay_physical(self):
+        from eventdedupe._signals import attendance_mode
+        self.assertIsNone(attendance_mode(None, None, "Zoom Room Bar"))
+        self.assertIsNone(attendance_mode(None, None, "Virtual Reality Arcade"))
+        self.assertEqual(attendance_mode(None, None, "Online (link after RSVP)"), "online")
+
+    def test_mixed_merges_with_either(self):
+        a = ev("City Budget Town Hall", "2026-10-18T18:00:00-07:00", "Zoom", "a")
+        b = ev("City Budget Town Hall", "2026-10-18T18:00:00-07:00", None, "b", eventAttendanceMode="MixedEventAttendanceMode")
+        self.assertTrue(same_event(a, b))
+
+
+class Status(unittest.TestCase):
+    def test_cancelled_title_still_matches_and_the_merge_keeps_it(self):
+        a = ev("Moonlight Cinema: Jaws", "2026-10-18T19:30:00-07:00", "Dolores Park", "a", status="EventScheduled")
+        b = ev("CANCELLED: Moonlight Cinema - Jaws", "2026-10-18T19:30:00-07:00", "Dolores Park", "b")
+        merged = dedupe([a, b])
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["status"], "cancelled")
+
+    def test_worst_status_field_wins(self):
+        a = ev("Bay Lights Run", "2026-10-18T08:00:00-07:00", "Embarcadero", "a",
+               eventStatus="https://schema.org/EventPostponed")
+        b = ev("Bay Lights Run", "2026-10-18T08:00:00-07:00", "Embarcadero", "b",
+               eventStatus="https://schema.org/EventScheduled")
+        merged = dedupe([b, a])
+        self.assertEqual(merged[0]["eventStatus"], "https://schema.org/EventPostponed")
+
+    def test_scheduled_everywhere_adds_nothing(self):
+        a = ev("Bay Lights Run", "2026-10-18T08:00:00-07:00", "Embarcadero", "a")
+        b = ev("Bay Lights Run", "2026-10-18T08:00:00-07:00", "Embarcadero", "b")
+        self.assertNotIn("status", dedupe([a, b])[0])
+
+
+class Presets(unittest.TestCase):
+    def test_strict_and_lenient(self):
+        a = ev("Velvet Lanterns", "2026-10-18T19:00:00-07:00", "The Chapel", "a")
+        b = ev("Velvet Lanterns with Glass Harbor", "2026-10-18T20:00:00-07:00", "The Chapel", "b")
+        self.assertTrue(same_event(a, b))
+        self.assertFalse(same_event(a, b, config=Config.strict()))
+        self.assertEqual(Config.lenient().time_tolerance_min, 60)
+        self.assertEqual(Config.strict(title_match=0.95).title_match, 0.95)
 
 
 class Cli(unittest.TestCase):

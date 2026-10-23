@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from difflib import SequenceMatcher
 from typing import Any, Iterable, Mapping
 
-from . import _text
+from . import _signals, _text
 from ._sports import matchup, matchups_agree
 from ._time import date_of, gap_minutes, parse_start
 
@@ -45,10 +45,33 @@ class Config:
     """"A vs B" and "B at A" are one game when the sides, sport and time agree."""
     sports_window_min: float = 90
 
+    links: bool = True
+    """Two listings with the same event page URL, date and time are one event."""
+    link_title_match: float = 0.6
+    """...if their titles are at least this similar (a shared link is sometimes a profile page)."""
+    near_km: float = 0.15
+    """Coordinates this close count as the same place when the venue names disagree or one is missing."""
+    far_km: float = 3.0
+    """Coordinates this far apart rule out a merge that has no venue name on one side."""
+
     title_noise: frozenset = _text.TITLE_NOISE
     venue_spellings: Mapping[str, str] = field(default_factory=lambda: dict(_text.VENUE_SPELLINGS))
     fast: bool = False
     """Use rapidfuzz for the edit ratio when it is installed (pip install eventdedupe[fast])."""
+
+    @classmethod
+    def strict(cls, **overrides: Any) -> "Config":
+        """Fewer, surer merges: for data where a wrong merge hides a real event."""
+        base = dict(time_tolerance_min=30, title_match=0.9, title_match_no_venue=0.96,
+                    drift_window_min=60, ampm_flip=False, doors_vs_show=False)
+        return cls(**{**base, **overrides})
+
+    @classmethod
+    def lenient(cls, **overrides: Any) -> "Config":
+        """More merges: for triage, or sources known to be sloppy with titles and times."""
+        base = dict(time_tolerance_min=60, title_match=0.8, title_match_no_venue=0.9,
+                    drift_window_min=120)
+        return cls(**{**base, **overrides})
 
 
 DEFAULT = Config()
@@ -64,6 +87,10 @@ FIELD_KEYS: dict[str, tuple[str, ...]] = {
     "link": ("link", "url"),
     "source": ("source",),
     "first_seen": ("first_seen",),
+    "lat": ("lat", "latitude"),
+    "lon": ("lon", "lng", "longitude"),
+    "mode": ("eventAttendanceMode", "attendance_mode", "attendanceMode"),
+    "status": ("status", "eventStatus", "event_status"),
 }
 
 
@@ -94,7 +121,7 @@ class _View:
 
     __slots__ = ("title", "title_tokens", "title_sorted", "title_set", "title_joined", "venue",
                  "venue_tokens", "venue_sorted", "venue_set", "date", "start", "aware", "source",
-                 "link", "first_seen", "matchup", "session", "place_words")
+                 "link", "first_seen", "matchup", "session", "place_words", "link_key", "point", "mode")
 
     def __init__(self, event: Mapping[str, Any], key_map: Mapping[str, str] | None, cfg: Config):
         def pick(name: str) -> Any:
@@ -112,7 +139,8 @@ class _View:
         self.title_sorted = " ".join(sorted(self.title_tokens))
         self.title_set = frozenset(self.title_tokens)
         self.title_joined = _text.joined(self.title)
-        self.venue = _venue_text(pick("venue"))
+        raw_venue = pick("venue")
+        self.venue = _venue_text(raw_venue)
         self.venue_tokens = _text.venue_tokens(self.venue, cfg.venue_spellings)
         self.venue_sorted = " ".join(sorted(self.venue_tokens))
         self.venue_set = frozenset(self.venue_tokens)
@@ -127,6 +155,9 @@ class _View:
         self.first_seen = pick("first_seen")
         self.matchup = matchup(self.title) if cfg.sports else None
         self.session = _text.session_marker(self.title)
+        self.link_key = _signals.canonical_link(self.link) if cfg.links else None
+        self.point = _signals.coordinates(pick("lat"), pick("lon"), raw_venue)
+        self.mode = _signals.attendance_mode(pick("mode"), raw_venue, self.venue)
 
 
 def _sim(a_sorted: str, a_set: frozenset, b_sorted: str, b_set: frozenset, containment: bool,
@@ -166,18 +197,27 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
     same_source = (a.source == b.source) if (a.source and b.source) else None
     cross_source = same_source is False
     both_venues = bool(a.venue_set and b.venue_set)
+    dist = _signals.distance_km(a.point, b.point)
+    near = dist is not None and dist <= cfg.near_km
+    far = dist is not None and dist > cfg.far_km
     out: dict[str, Any] = {
         "match": False, "rule": None, "reason": "",
         "dates": [a.date, b.date], "start_gap_minutes": None if gap is None else round(gap, 1),
         "same_source": same_source, "title_similarity": None, "venue_similarity": None,
+        "distance_km": None if dist is None else round(dist, 3),
     }
     memo: dict[str, Any] = {}
 
     def title_sim(need: float | None = None) -> float:
-        if "t" not in memo or (need is None and memo["t_bound"]):
-            memo["t"] = _sim(a.title_sorted, a.title_set, b.title_sorted, b.title_set, True,
-                             cfg.fast, None if full else need)
-            memo["t_bound"] = need is not None and not full
+        # A bounded score r computed for need n is a lower bound of the true score, and when
+        # r < n the true score is below n too. Reuse it only when that settles the new question.
+        if "t" in memo:
+            r, n = memo["t"], memo["t_need"]
+            if n is None or (need is not None and (r >= need or (r < n and need >= n))):
+                return r
+        bound = None if full else need
+        memo["t"] = _sim(a.title_sorted, a.title_set, b.title_sorted, b.title_set, True, cfg.fast, bound)
+        memo["t_need"] = bound
         return memo["t"]
 
     def venue_ok() -> bool:
@@ -205,7 +245,10 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
         return memo["o"]
 
     def place_ok() -> bool:
-        return not both_venues or venue_ok() or overlap()
+        # Venue names that agree win over coordinates (geocoders fall back to a city centre).
+        if both_venues:
+            return venue_ok() or overlap() or near
+        return not far
 
     def finish(match: bool, rule: str | None, reason: str) -> dict[str, Any]:
         out.update(match=match, rule=rule, reason=reason)
@@ -225,6 +268,17 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
     if a.date != b.date and not (a.aware and b.aware and gap is not None
                                  and gap <= cfg.time_tolerance_min):
         return no("different dates")
+
+    if _signals.modes_conflict(a.mode, b.mode):
+        return no("one listing is online, the other in person")
+
+    # The same event page, date and time. Titles still have to be related and the places must
+    # not disagree: a link can be a venue's profile or one program page ("Zumba in the Parks")
+    # that many listings at different places point at.
+    if (a.link_key and a.link_key == b.link_key and a.session == b.session
+            and (gap is None or gap <= cfg.time_tolerance_min)
+            and title_sim(cfg.link_title_match) >= cfg.link_title_match and place_ok()):
+        return yes("same_link", "same event page, date and time, related titles")
 
     if (a.matchup and b.matchup and same_source is not True
             and matchups_agree(a.matchup, b.matchup, a.title, b.title)):
@@ -254,9 +308,12 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
         return no(f"starts {gap:.0f} min apart")
 
     if both_venues:
-        if venue_ok():
+        if venue_ok() or near:
             if title_sim(cfg.title_match) >= cfg.title_match:
-                return yes("title_venue", "similar title at the same venue")
+                if venue_ok():
+                    return yes("title_venue", "similar title at the same venue")
+                return yes("title_coordinates", f"similar title, venues named differently but "
+                                                f"{dist * 1000:.0f} m apart")
             if (cross_source and gap is not None and gap <= cfg.headliner_window_min
                     and _text.shared_headliner(a.title, b.title)):
                 return yes("headliner", "same venue and time, titles open with the same act")
@@ -268,6 +325,10 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
             return yes("place_overlap", "same title, venue named in different words")
         return no("different venues")
 
+    if far:
+        return no(f"no venue name on one side to confirm it, and the coordinates are {dist:.1f} km apart")
+    if near and title_sim(cfg.title_match) >= cfg.title_match:
+        return yes("title_coordinates", f"similar title, {dist * 1000:.0f} m apart")
     strict = _sim(a.title_sorted, a.title_set, b.title_sorted, b.title_set, False, cfg.fast,
                   None if full else cfg.title_match_no_venue)
     if strict >= cfg.title_match_no_venue:
@@ -396,8 +457,39 @@ def merge(group: list[Mapping[str, Any]], *, key_map: Mapping[str, str] | None =
     if seen:
         key = (key_map or {}).get("first_seen", "first_seen")
         merged[key] = min(seen)
+    _escalate_status(merged, group, key_map, cfg)
     merged["duplicates"] = len(group) - 1
     return merged
+
+
+def _escalate_status(merged: dict[str, Any], group: list[Mapping[str, Any]],
+                     key_map: Mapping[str, str] | None, cfg: Config) -> None:
+    """The worst status any listing reports wins: one source saying "cancelled" is news.
+
+    Reads status fields (schema.org eventStatus or plain words) and titles that open with
+    "CANCELLED"/"POSTPONED". Writes into the status field the group already uses, or `status`.
+    """
+    if len(group) < 2:
+        return
+    keys = [key_map["status"]] if key_map and "status" in key_map else list(FIELD_KEYS["status"])
+    worst_value, worst_rank, field_used = None, -1, None
+    for e in group:
+        for k in keys:
+            v = _get(e, k) if "." in k else e.get(k)
+            name = _signals.status_name(v) if v not in EMPTY else None
+            if name is not None:
+                field_used = field_used or k
+                if _signals.severity(name) > worst_rank:
+                    worst_value, worst_rank = v, _signals.severity(name)
+        title = _View(e, key_map, cfg).title
+        name = _signals.title_status(title)
+        if name and _signals.severity(name) > worst_rank:
+            worst_value, worst_rank = name, _signals.severity(name)
+    if worst_value is None or worst_rank <= 0:
+        return
+    key = field_used or "status"
+    if "." not in key:
+        merged[key] = worst_value
 
 
 def dedupe(events: list[Mapping[str, Any]], *, key_map: Mapping[str, str] | None = None,

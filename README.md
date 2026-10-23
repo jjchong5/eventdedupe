@@ -59,6 +59,8 @@ cases. These are the ones it misses or gets wrong, each handled by a named rule 
 |---|---|
 | `title_venue` | Word order, case, accents, "&" vs "and", noise words ("live", "presents", "tickets"), venue spellings ("Theatre"/"Theater", "St"/"Street"), a venue name with or without its address, and "Birdland" vs "Birdland Jazz Club". |
 | `title_only` | One listing has no venue: only a near-identical title counts. |
+| `same_link` | Two listings point at the same event page (tracking parameters, `www.` and `#tickets` ignored; `#/route` calendars kept) on the same date and time, with related titles. A site root, a bare `/events` page or a venue profile shared by many listings doesn't count. |
+| `title_coordinates` | Venue names disagree or one is missing, but the coordinates are within 150 m. |
 | `lead_in` | A recurring night re-posted with different wording after the same opening ("SalsaCrazy Saturday - Dance Lessons..." / "Salsa Crazy Saturday - Best Dance Party..."), at the same venue and time. |
 | `headliner` | Ticket sites retitling one show ("Marigold Echo - Northern Lights Tour" / "Marigold Echo with Pale Season"): same venue, start within 30 min, same act name. |
 | `place_overlap` | One venue named two ways ("John Natsoulas Gallery" / "John Natsoulas Center for the Arts") with a near-identical title. |
@@ -75,6 +77,10 @@ Guards that keep it from over-merging:
   sessions (an early and a late show, a morning and an afternoon class).
 - **Session words keep shows apart across sources too**: "Late Show", "2nd Seating", "Set 2" or
   "Matinee" in one title and not the other blocks the cross-source time rules.
+- **Online never merges with in person**: a listing whose venue is "Online"/"Zoom" or whose
+  `eventAttendanceMode` is online is kept apart from an explicitly in-person one. Hybrid merges with either.
+- **Far-apart coordinates block a merge with no venue name on one side** (over 3 km). Venue names
+  that agree still win over coordinates, since geocoders fall back to a city centre.
 - **"X at Y" is only a game with a "vs" or a sport word**: "Comedy Night at The Independent" is a
   show at a venue, not a matchup.
 - **Short, generic titles never merge across different venues** ("Zumba" at two parks is two
@@ -96,6 +102,9 @@ Each listing is a dict. Fields are found by name, in this order:
 | link | `link`, `url` |
 | source | `source` (any id for where the listing came from) |
 | first_seen | `first_seen` |
+| lat / lon | `lat`/`latitude`, `lon`/`lng`/`longitude`, or a schema.org `Place`'s `geo` |
+| attendance mode | `eventAttendanceMode`, `attendance_mode` (schema.org values or "online"/"offline"/"mixed") |
+| status | `status`, `eventStatus`, `event_status` (schema.org values or "cancelled", "postponed", ...) |
 
 So schema.org `Event` JSON-LD works as is. For anything else, map the names, dotted paths allowed:
 
@@ -115,6 +124,8 @@ listing of its group, with empty fields filled from the others, plus:
 - `links`: every listing's link, in input order
 - `duplicates`: how many listings were folded in
 - `first_seen`: the earliest, when listings have one
+- the worst status any listing reports (cancelled > postponed > rescheduled), in the status field
+  the listings use, or `status` when only a title said "CANCELLED: ..."
 - `_matches` (with `explain_matches=True` or `--explain`): the pairs that joined, with rule and reason
 
 `groups()` returns just the index groups, if you'd rather merge yourself. `same_event(a, b)` and
@@ -126,6 +137,8 @@ listing of its group, with empty fields filled from the others, plus:
 from eventdedupe import Config, dedupe
 
 dedupe(rows, config=Config(time_tolerance_min=30, title_match=0.9, sports=False))
+dedupe(rows, config=Config.strict())   # fewer, surer merges
+dedupe(rows, config=Config.lenient())  # more merges, for triage
 ```
 
 Every threshold and rule switch is a `Config` field with a docstring. `Config(fast=True)` uses
@@ -140,7 +153,7 @@ in pure Python.
 
 ## Limits
 
-- No geocoding: two venue strings are compared as text. Coordinates are carried along but unused.
+- No geocoding: coordinates are used when the listings carry them, never looked up.
 - Multi-day events are matched by start date only.
 - Recurring series are not detected as series; each night is its own event.
 - The rules are tuned for English listing conventions.

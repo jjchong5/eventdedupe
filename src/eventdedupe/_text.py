@@ -10,6 +10,8 @@ from typing import Iterable
 TITLE_NOISE = frozenset({
     "a", "an", "and", "at", "the", "with", "presents", "present", "live", "tickets", "ticket",
     "feat", "featuring", "ft", "w", "plus", "special", "guest", "guests", "event", "show",
+    # status words a source puts in front of a title ("CANCELLED: ..."); merge() keeps the status
+    "cancelled", "canceled", "postponed", "rescheduled",
 })
 VENUE_NOISE = frozenset({"the", "at"})
 # Spellings that differ between listings of the same place.
