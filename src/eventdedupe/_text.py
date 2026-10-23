@@ -140,16 +140,37 @@ def shared_headliner(a: str | None, b: str | None, min_chars: int = 7,
     return len(kept) >= (4 if whole else min_chars)
 
 
+# Words that name one of several sessions of the same thing: "Late Show", "2nd Set", "Matinee".
+_SESSION = re.compile(
+    r"\b(?:(?:early|late|first|second|third|1st|2nd|3rd|evening|afternoon|morning)\s+"
+    r"(?:show|set|seating|session|performance)"
+    r"|(?:show|set|seating|session)\s*(?:#\s*)?(?:[1-9]|ii|iii)"
+    r"|matinee)\b",
+    re.I)
+
+
+def session_marker(title: str | None) -> str | None:
+    """The session words in a title ("late show", "set 2", "matinee"), lower-cased, or None."""
+    m = _SESSION.search(title or "")
+    return " ".join(m.group(0).lower().split()) if m else None
+
+
+def place_words(venue: str | None) -> frozenset[str]:
+    """The venue name's words for place_overlap(), minus filler ("center", "hall", "the")."""
+    return frozenset(tokens((venue or "").split(",")[0], ())) - PLACE_STOP
+
+
 def place_overlap(a: str | None, b: str | None) -> bool:
     """Two venue strings that name one place in different words.
 
     "John Natsoulas Gallery" / "John Natsoulas Center for the Arts": at least two shared words
     in the name, covering 60% of the shorter name.
     """
-    def toks(v: str | None) -> set[str]:
-        return set(tokens((v or "").split(",")[0], ())) - PLACE_STOP
+    return words_overlap(place_words(a), place_words(b))
 
-    ta, tb = toks(a), toks(b)
+
+def words_overlap(ta: frozenset[str], tb: frozenset[str]) -> bool:
+    """place_overlap() on precomputed place_words()."""
     if not ta or not tb:
         return False
     shared = ta & tb

@@ -94,7 +94,7 @@ class _View:
 
     __slots__ = ("title", "title_tokens", "title_sorted", "title_set", "title_joined", "venue",
                  "venue_tokens", "venue_sorted", "venue_set", "date", "start", "aware", "source",
-                 "link", "first_seen", "matchup")
+                 "link", "first_seen", "matchup", "session", "place_words")
 
     def __init__(self, event: Mapping[str, Any], key_map: Mapping[str, str] | None, cfg: Config):
         def pick(name: str) -> Any:
@@ -116,6 +116,7 @@ class _View:
         self.venue_tokens = _text.venue_tokens(self.venue, cfg.venue_spellings)
         self.venue_sorted = " ".join(sorted(self.venue_tokens))
         self.venue_set = frozenset(self.venue_tokens)
+        self.place_words = _text.place_words(self.venue)
         raw_start = pick("start")
         self.start = parse_start(raw_start)
         self.aware = self.start is not None and self.start.tzinfo is not None
@@ -125,6 +126,7 @@ class _View:
         self.link = pick("link")
         self.first_seen = pick("first_seen")
         self.matchup = matchup(self.title) if cfg.sports else None
+        self.session = _text.session_marker(self.title)
 
 
 def _sim(a_sorted: str, a_set: frozenset, b_sorted: str, b_set: frozenset, containment: bool,
@@ -153,10 +155,12 @@ def _strong(a: _View, b: _View, cfg: Config) -> bool:
                      cfg.strong_title) >= cfg.strong_title)
 
 
-def _decide(a: _View, b: _View, cfg: Config, full: bool = True) -> dict[str, Any]:
+def _decide(a: _View, b: _View, cfg: Config, full: bool = True,
+            venue_cache: dict | None = None) -> dict[str, Any]:
     """The decision for one pair, with the evidence behind it.
 
-    `full=False` (bulk grouping) skips evidence the decision did not need.
+    `full=False` (bulk grouping) skips evidence the decision did not need. `venue_cache` holds
+    venue-pair verdicts across calls: a city's listings share a few hundred venue names.
     """
     gap = gap_minutes(a.start, b.start)
     same_source = (a.source == b.source) if (a.source and b.source) else None
@@ -177,6 +181,16 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True) -> dict[str, Any
         return memo["t"]
 
     def venue_ok() -> bool:
+        if "v" not in memo and venue_cache is not None and not full:
+            key = (a.venue, b.venue) if a.venue <= b.venue else (b.venue, a.venue)
+            hit = venue_cache.get(key)
+            if hit is None:
+                hit = venue_cache[key] = (
+                    _sim(a.venue_sorted, a.venue_set, b.venue_sorted, b.venue_set, True, cfg.fast,
+                         cfg.venue_match) >= cfg.venue_match
+                    or _text.venue_prefix_match(a.venue_tokens, b.venue_tokens),
+                    _text.words_overlap(a.place_words, b.place_words))
+            memo["v"], memo["ov"] = hit
         if "v" not in memo:
             v = _sim(a.venue_sorted, a.venue_set, b.venue_sorted, b.venue_set, True, cfg.fast,
                      None if full else cfg.venue_match)
@@ -186,7 +200,8 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True) -> dict[str, Any
 
     def overlap() -> bool:
         if "o" not in memo:
-            memo["o"] = both_venues and not venue_ok() and _text.place_overlap(a.venue, b.venue)
+            memo["o"] = both_venues and not venue_ok() and (
+                memo["ov"] if "ov" in memo else _text.words_overlap(a.place_words, b.place_words))
         return memo["o"]
 
     def place_ok() -> bool:
@@ -225,6 +240,9 @@ def _decide(a: _View, b: _View, cfg: Config, full: bool = True) -> dict[str, Any
             return no(f"starts {gap:.0f} min apart ({why}: treated as two sessions)")
         if not place_ok():
             return no(f"starts {gap:.0f} min apart at different venues")
+        if a.session != b.session:
+            return no(f"starts {gap:.0f} min apart and the titles name different sessions "
+                      f"({a.session or 'none'} / {b.session or 'none'})")
         if cfg.ampm_flip and abs(gap - 720) <= 30 and _strong(a, b, cfg):
             return yes("ampm_flip", "starts 12 h apart, same title and place: one listing flipped AM/PM")
         if gap <= cfg.drift_window_min and _strong(a, b, cfg):
@@ -306,11 +324,12 @@ def _link(views: list[_View], cfg: Config, edges: list | None = None) -> _UnionF
     for i, v in enumerate(views):
         by_date[v.date or ""].append(i)
     uf = _UnionFind(len(views))
+    venue_cache: dict = {}
 
     def try_pair(i: int, j: int) -> None:
         if uf.find(i) == uf.find(j):
             return
-        d = _decide(views[i], views[j], cfg, full=False)
+        d = _decide(views[i], views[j], cfg, full=False, venue_cache=venue_cache)
         if d["match"]:
             uf.union(i, j)
             if edges is not None:
@@ -324,10 +343,11 @@ def _link(views: list[_View], cfg: Config, edges: list | None = None) -> _UnionF
         # 03:00 UTC the next day): compare offset-aware starts across midnight too.
         nxt = _next_day(day) if day else None
         if nxt and nxt in by_date:
+            # _decide only accepts a cross-date pair within time_tolerance_min, so test that first.
             for i in idx:
                 if views[i].aware:
                     for j in by_date[nxt]:
-                        if views[j].aware:
+                        if views[j].aware and gap_minutes(views[i].start, views[j].start) <= cfg.time_tolerance_min:
                             try_pair(i, j)
     return uf
 

@@ -41,9 +41,10 @@ def main(argv: list[str] | None = None) -> int:
         key_map[field.strip()] = name.strip()
 
     if args.input == "-":
-        text = sys.stdin.read()
+        raw = getattr(sys.stdin, "buffer", None)
+        text = raw.read().decode("utf-8-sig") if raw else sys.stdin.read()
     else:
-        with open(args.input, encoding="utf-8") as f:
+        with open(args.input, encoding="utf-8-sig") as f:
             text = f.read()
     events, is_array = _read(text)
     merged = dedupe(events, key_map=key_map or None, explain_matches=args.explain)
@@ -53,11 +54,18 @@ def main(argv: list[str] | None = None) -> int:
     else:
         out = "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in merged)
     if args.output == "-":
-        sys.stdout.write(out)
+        raw = getattr(sys.stdout, "buffer", None)
+        if raw:  # UTF-8 even on a Windows console code page
+            sys.stdout.flush()
+            raw.write(out.encode("utf-8"))
+            raw.flush()
+        else:
+            sys.stdout.write(out)
     else:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(out)
-    print(f"{len(events)} listings -> {len(merged)} events", file=sys.stderr)
+    print(f"{len(events)} listing{'s' * (len(events) != 1)} -> "
+          f"{len(merged)} event{'s' * (len(merged) != 1)}", file=sys.stderr)
     return 0
 
 

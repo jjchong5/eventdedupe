@@ -18,6 +18,19 @@ def ev(title, start=None, venue=None, source=None, date="2026-10-18", **kw):
 
 
 class CrossSourceTimes(unittest.TestCase):
+    def test_early_and_late_show_stay_apart(self):
+        # Without the session words this would pass as doors-vs-show (90 min, one title starts
+        # the other, two sources).
+        a = ev("Comedy Night at The Independent", "2026-10-18T19:00:00-07:00", "The Independent", "club")
+        b = ev("Comedy Night at The Independent - Late Show", "2026-10-18T20:30:00-07:00",
+               "The Independent", "tickets")
+        d = explain(a, b)
+        self.assertFalse(d["match"])
+        self.assertIn("different sessions", d["reason"])
+        self.assertEqual(_text.session_marker("Jazz Brunch (2nd Seating)"), "2nd seating")
+        self.assertEqual(_text.session_marker("Quartet - Set 2"), "set 2")
+        self.assertIsNone(_text.session_marker("Showcase Settlers Night"))
+
     def test_ampm_flip(self):
         a = ev("Sunrise Yoga on the Beach", "2026-10-18T06:30:00-07:00", "Ocean Beach", "studio")
         b = ev("Sunrise Yoga on the Beach", "2026-10-18T18:30:00-07:00", "Ocean Beach", "listings")
@@ -115,6 +128,21 @@ class Sports(unittest.TestCase):
         a = ev("Bay City Bears vs Harbor Town Hawks", "2026-10-18T13:00:00-07:00", source="team")
         b = ev("Bay City Bears vs Harbor Town Hawks Watch Party", "2026-10-18T13:00:00-07:00", source="bar")
         self.assertFalse(same_event(a, b))
+
+    def test_show_at_a_venue_is_not_a_game(self):
+        # "X at Y" without "vs" or a sport word is a show at a venue, not a matchup.
+        from eventdedupe._sports import same_matchup
+        self.assertFalse(same_matchup("Comedy Night at The Independent",
+                                      "The Independent at Comedy Night"))
+        self.assertTrue(same_matchup("Hawks at Bears", "Bears vs Hawks"))
+        c = ev("Open Mic at The Rusty Pub", "2026-10-18T19:00:00-07:00")
+        d = ev("Open Mic at The Rusty Pub", "2026-10-18T20:15:00-07:00")
+        self.assertFalse(same_event(c, d))
+
+    def test_at_with_a_sport_word_is_a_game(self):
+        a = ev("Harbor Town Hawks at Bay City Bears Baseball", "2026-10-18T13:00:00-07:00", source="a")
+        b = ev("Bay City Bears Baseball at Harbor Town Hawks", "2026-10-18T13:10:00-07:00", source="b")
+        self.assertEqual(explain(a, b)["rule"], "sports_matchup")
 
     def test_different_sport_or_gender(self):
         a = ev("State Hockey vs Tech Hockey", source="a")

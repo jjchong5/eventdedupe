@@ -73,6 +73,10 @@ Guards that keep it from over-merging:
   `source`. The cross-source time rules (`ampm_flip`, `time_drift`, `doors_vs_show`,
   `headliner`) only run when they do; the same source posting a title twice in one day means two
   sessions (an early and a late show, a morning and an afternoon class).
+- **Session words keep shows apart across sources too**: "Late Show", "2nd Seating", "Set 2" or
+  "Matinee" in one title and not the other blocks the cross-source time rules.
+- **"X at Y" is only a game with a "vs" or a sport word**: "Comedy Night at The Independent" is a
+  show at a venue, not a matchup.
 - **Short, generic titles never merge across different venues** ("Zumba" at two parks is two
   classes), and the time rules need a title at least 12 letters long.
 - **Times with offsets compare by instant**: "20:00 -07:00" and "03:00Z the next day" are the same

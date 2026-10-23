@@ -10,3 +10,6 @@ First release.
 - Offset-aware start times; schema.org Event input; `key_map` for other shapes.
 - `eventdedupe` command line (JSON or JSON Lines, `--explain`, `--key`).
 - Optional `rapidfuzz` speed-up (`eventdedupe[fast]`).
+- Guards: session words ("Late Show", "2nd Seating", "Set 2", "Matinee") block the cross-source
+  time rules; "X at Y" counts as a game only with a "vs" or a sport word.
+- Command line reads and writes UTF-8 regardless of the console code page.
