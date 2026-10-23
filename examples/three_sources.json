@@ -1,0 +1,11 @@
+[
+  {"title": "The Birdland Latin Jazz Orchestra", "start": "2026-10-18T17:30:00-04:00", "venue": "Birdland Jazz Club, 315 W 44th St, New York", "link": "https://venue.example/latin-jazz", "source": "venue"},
+  {"title": "BIRDLAND LATIN JAZZ ORCHESTRA", "start": "2026-10-18T17:30:00-04:00", "venue": "Birdland", "link": "https://tickets.example/e/1001", "source": "tickets", "price": "$35"},
+  {"@type": "Event", "name": "Birdland Latin Jazz Orchestra (live)", "startDate": "2026-10-18T21:30:00Z", "location": {"@type": "Place", "name": "Birdland Jazz Club"}, "url": "https://community.example/p/77", "source": "community"},
+  {"title": "Velvet Lanterns", "start": "2026-10-18T19:00:00-04:00", "venue": "Bowery Ballroom", "link": "https://venue.example/velvet", "source": "venue"},
+  {"title": "Velvet Lanterns with Glass Harbor and Dune Choir", "start": "2026-10-18T20:00:00-04:00", "venue": "The Bowery Ballroom, 6 Delancey St", "link": "https://tickets.example/e/1003", "source": "tickets"},
+  {"title": "Harbor Town Hawks at Bay City Bears", "start": "2026-10-18T13:00:00-04:00", "link": "https://tickets.example/e/1005", "source": "tickets"},
+  {"title": "Bay City Bears vs. Harbor Town Hawks", "start": "2026-10-18T13:05:00-04:00", "venue": "Bayside Park", "link": "https://team.example/games/18", "source": "team"},
+  {"title": "Late Night Laughs: Comedy Showcase", "start": "2026-10-18T19:00:00-04:00", "venue": "Cellar Comedy Club", "link": "https://venue.example/cellar/1900", "source": "venue"},
+  {"title": "Late Night Laughs: Comedy Showcase", "start": "2026-10-18T21:30:00-04:00", "venue": "Cellar Comedy Club", "link": "https://venue.example/cellar/2130", "source": "venue"}
+]

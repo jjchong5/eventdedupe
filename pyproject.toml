@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eventdedupe"
+version = "0.1.0"
+description = "Merge duplicate event listings from different sources, and explain every match."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jonathan Chong", email = "jon@jchong.dev" }]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["deduplication", "events", "entity-resolution", "record-linkage", "schema.org", "calendar"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+fast = ["rapidfuzz>=3"]
+
+[project.scripts]
+eventdedupe = "eventdedupe.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jjchong5/eventdedupe"
+Issues = "https://github.com/jjchong5/eventdedupe/issues"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]

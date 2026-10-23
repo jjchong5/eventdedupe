@@ -1,0 +1,50 @@
+{"_group": "orchestra", "title": "The Birdland Latin Jazz Orchestra", "start": "2026-10-18T17:30:00-04:00", "venue": "Birdland Jazz Club, 315 W 44th St, New York", "link": "https://venue.example/birdland/latin-jazz", "source": "venue"}
+{"_group": "orchestra", "title": "BIRDLAND LATIN JAZZ ORCHESTRA", "start": "2026-10-18T17:30:00-04:00", "venue": "Birdland", "link": "https://tickets.example/e/1001", "source": "tickets", "price": "$35"}
+{"_group": "orchestra", "title": "Birdland Latin Jazz Orchestra (live)", "date": "2026-10-18", "venue": "Birdland Jazz Club", "link": "https://community.example/p/77", "source": "community"}
+{"_group": "comedy-early", "title": "Late Night Laughs: Comedy Showcase", "start": "2026-10-18T19:00:00-04:00", "venue": "Cellar Comedy Club", "link": "https://venue.example/cellar/1900", "source": "venue"}
+{"_group": "comedy-early", "title": "Late Night Laughs - Comedy Showcase", "start": "2026-10-18T19:00:00-04:00", "venue": "Cellar Comedy Club, 117 Main St", "link": "https://tickets.example/e/1002", "source": "tickets"}
+{"_group": "comedy-late", "title": "Late Night Laughs: Comedy Showcase", "start": "2026-10-18T21:30:00-04:00", "venue": "Cellar Comedy Club", "link": "https://venue.example/cellar/2130", "source": "venue"}
+{"_group": "yoga", "title": "Sunrise Yoga on the Beach", "start": "2026-10-18T06:30:00-07:00", "venue": "Ocean Beach, Great Hwy", "link": "https://studio.example/sunrise", "source": "studio"}
+{"_group": "yoga", "title": "Sunrise Yoga on the Beach", "start": "2026-10-18T18:30:00-07:00", "venue": "Ocean Beach", "link": "https://listings.example/e/88", "source": "listings"}
+{"_group": "velvet", "title": "Velvet Lanterns", "start": "2026-10-18T19:00:00-07:00", "venue": "The Chapel, 777 Valencia St", "link": "https://venue.example/chapel/velvet", "source": "venue"}
+{"_group": "velvet", "title": "Velvet Lanterns with Glass Harbor and Dune Choir", "start": "2026-10-18T20:00:00-07:00", "venue": "The Chapel", "link": "https://tickets.example/e/1003", "source": "tickets"}
+{"_group": "marigold", "title": "Marigold Echo - Northern Lights Tour", "start": "2026-10-18T20:00:00-07:00", "venue": "Fillmore Auditorium", "link": "https://tickets.example/e/1004", "source": "tickets"}
+{"_group": "marigold", "title": "Marigold Echo with Pale Season", "start": "2026-10-18T20:00:00-07:00", "venue": "The Fillmore Auditorium, San Francisco", "link": "https://venue.example/fillmore/marigold", "source": "venue"}
+{"_group": "salsa", "title": "SalsaCrazy Saturday - Dance Lessons and Social", "start": "2026-10-18T21:00:00-07:00", "venue": "Verdi Club", "link": "https://organizer.example/sat", "source": "organizer"}
+{"_group": "salsa", "title": "Salsa Crazy Saturday - Best Dance Party in Town!", "start": "2026-10-18T21:00:00-07:00", "venue": "Verdi Club, 2424 Mariposa St", "link": "https://meetups.example/salsa/123", "source": "meetups"}
+{"_group": "salsa", "title": "SalsaCrazy Saturday: Free Beginner Lesson", "start": "2026-10-18T21:15:00-07:00", "venue": "The Verdi Club", "link": "https://community.example/p/91", "source": "community"}
+{"_group": "game", "title": "Bay City Bears vs. Harbor Town Hawks", "start": "2026-10-18T13:05:00-07:00", "venue": "Bayside Park", "link": "https://team.example/games/18", "source": "team"}
+{"_group": "game", "title": "Harbor Town Hawks at Bay City Bears", "start": "2026-10-18T13:00:00-07:00", "link": "https://tickets.example/e/1005", "source": "tickets"}
+{"_group": "game2", "title": "Bay City Bears vs Harbor Town Hawks - Game 2", "start": "2026-10-18T18:10:00-07:00", "venue": "Bayside Park", "link": "https://team.example/games/18b", "source": "team"}
+{"_group": "watch", "title": "Bears vs Hawks Watch Party", "start": "2026-10-18T13:00:00-07:00", "venue": "Corner Tap Room", "link": "https://bar.example/watch", "source": "bar"}
+{"_group": "women", "title": "Bay City Bears Women's Soccer vs Harbor Town Hawks", "start": "2026-10-18T16:00:00-07:00", "venue": "Bayside Park", "link": "https://team.example/w/3", "source": "team-w"}
+{"_group": "launch", "title": "Global Product Launch Livestream", "start": "2026-10-18T20:00:00-07:00", "venue": "Online", "link": "https://company.example/launch", "source": "company"}
+{"_group": "launch", "title": "Global Product Launch Livestream", "start": "2026-10-19T03:00:00Z", "venue": "Online", "link": "https://listings.example/e/99", "source": "listings"}
+{"_group": "zumba-park", "title": "ZUMBA®", "start": "2026-10-18T18:00:00-07:00", "venue": "Salesforce Park", "link": "https://park.example/zumba", "source": "park"}
+{"_group": "zumba-marin", "title": "Zumba!", "start": "2026-10-18T18:00:00-07:00", "venue": "Marin Dance Hall", "link": "https://meetups.example/zumba/5", "source": "meetups"}
+{"_group": "pottery", "title": "Wheel Throwing for Beginners", "start": "2026-10-18T10:00:00-07:00", "venue": "Clay Studio", "link": "https://claystudio.example/s1", "source": "claystudio"}
+{"_group": "pottery2", "title": "Wheel Throwing for Beginners", "start": "2026-10-18T12:00:00-07:00", "venue": "Clay Studio", "link": "https://claystudio.example/s2", "source": "claystudio"}
+{"_group": "film", "@type": "Event", "name": "Midnight Movie: The Lost Reel", "startDate": "2026-10-18T23:59:00-07:00", "location": {"@type": "Place", "name": "Roxie Theatre", "address": {"streetAddress": "3117 16th St"}}, "url": "https://roxie.example/lost-reel", "source": "roxie"}
+{"_group": "film", "title": "Midnight Movie - The Lost Reel", "start": "2026-10-18T23:59:00-07:00", "venue": "Roxie Theater", "link": "https://listings.example/e/120", "source": "listings"}
+{"_group": "market", "title": "Ferry Plaza Farmers Market", "date": "2026-10-18", "venue": "Ferry Building", "link": "https://market.example/sat", "source": "market"}
+{"_group": "market", "title": "Ferry Plaza Farmers Market", "start": "2026-10-18T08:00:00-07:00", "venue": "Ferry Building Marketplace, 1 Ferry Building", "link": "https://listings.example/e/121", "source": "listings"}
+{"_group": "market-next", "title": "Ferry Plaza Farmers Market", "date": "2026-10-25", "venue": "Ferry Building", "link": "https://market.example/sat2", "source": "market"}
+{"_group": "trivia", "title": "Trivia", "start": "2026-10-18T19:00:00-07:00", "venue": "Mission Pub", "link": "https://pub.example/trivia", "source": "pub"}
+{"_group": "hp-trivia", "title": "Harry Potter Trivia Championship", "start": "2026-10-18T19:00:00-07:00", "venue": "Mission Pub", "link": "https://tickets.example/e/1006", "source": "tickets"}
+{"_group": "lantern", "title": "Autumn Lantern Festival", "date": "2026-10-18", "venue": "Botanical Garden", "link": "https://garden.example/lanterns", "source": "garden"}
+{"_group": "lantern", "title": "Autumn Lantern Festival", "date": "2026-10-18", "link": "https://community.example/p/101", "source": "community"}
+{"_group": "lantern-kids", "title": "Autumn Lantern Festival Kids Workshop", "date": "2026-10-18", "link": "https://community.example/p/102", "source": "community"}
+{"_group": "gallery", "title": "Fall Group Exhibition Opening Reception", "start": "2026-10-18T18:00:00-07:00", "venue": "John Natsoulas Gallery", "link": "https://gallery.example/fall", "source": "gallery"}
+{"_group": "gallery", "title": "Fall Group Exhibition Opening Reception", "start": "2026-10-18T18:00:00-07:00", "venue": "John Natsoulas Center for the Arts", "link": "https://listings.example/e/130", "source": "listings"}
+{"_group": "poetry", "title": "Open Mic Poetry Night", "start": "2026-10-18T19:30:00-07:00", "venue": "Bird & Beckett Books", "link": "https://books.example/openmic", "source": "books"}
+{"_group": "openmic-other", "title": "Open Mic Poetry Night", "start": "2026-10-18T19:30:00-07:00", "venue": "Sour Mouse", "link": "https://sourmouse.example/openmic", "source": "sourmouse"}
+{"_group": "hackathon", "title": "Climate Data Hackathon", "start": "2026-10-18T09:00:00-07:00", "venue": "Civic Center Library, Room 4", "link": "https://hack.example/climate", "source": "hack"}
+{"_group": "hackathon", "title": "Climate Data Hackathon 2026", "start": "2026-10-18T09:00:00-07:00", "venue": "Civic Center Library", "link": "https://meetups.example/climate/7", "source": "meetups"}
+{"_group": "tour", "title": "Historic Chinatown Walking Tour", "start": "2026-10-18T10:00:00-07:00", "venue": "Portsmouth Square", "link": "https://tours.example/chinatown", "source": "tours"}
+{"_group": "tour2", "title": "Historic Chinatown Walking Tour", "start": "2026-10-18T14:00:00-07:00", "venue": "Portsmouth Square", "link": "https://tours.example/chinatown-pm", "source": "tours"}
+{"_group": "cafe", "title": "Café Tacvba en vivo", "start": "2026-10-18T20:00:00-07:00", "venue": "The Warfield, 982 Market St", "link": "https://venue.example/warfield/tacvba", "source": "venue"}
+{"_group": "cafe", "title": "CAFE TACVBA EN VIVO", "start": "2026-10-18T20:00:00-07:00", "venue": "The Warfield, San Francisco, CA", "link": "https://tickets.example/e/1007", "source": "tickets"}
+{"_group": "book", "title": "Author Talk: Rivers of the West", "start": "2026-10-18T18:30:00-07:00", "venue": "Green Apple Books", "link": "https://books2.example/rivers", "source": "books2"}
+{"_group": "dance", "title": "Lindy in the Park", "start": "2026-10-18T11:00:00-07:00", "venue": "Golden Gate Park, JFK Promenade", "link": "https://lindy.example/park", "source": "lindy"}
+{"_group": "dance", "title": "Lindy in the Park Swing Dance Party", "start": "2026-10-18T11:00:00-07:00", "venue": "Golden Gate Park", "link": "https://community.example/p/140", "source": "community"}
+{"_group": "run", "title": "Bay to Breakers Training Run", "start": "2026-10-18T07:00:00-07:00", "venue": "Embarcadero Plaza", "link": "https://runclub.example/train", "source": "runclub"}
